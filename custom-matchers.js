@@ -4,26 +4,70 @@ var R = require('ramda');
 
 var isContractErr = R.propEq('name', 'ContractError');
 
-function tryCatch(fn, catchWith) {
-  try {
-    fn();
-  } catch(err) {
-    catchWith(err);
+function toThrowContractErrorWithMsg(msg) {
+  var result = false;
+
+  var error = getErrorFromFnCall(this.actual);
+
+  if(isContractErr(error)) {
+    var hasMessage = R.strIndexOf(msg, error.message) > -1;
+
+    if(hasMessage) {
+      result = true;
+    } else {
+      this.message = makeMessageFromError(error, msg);
+    }
+  }
+
+  return result;
+}
+
+function toThrowContractErrorPlain() {
+  var result = false;
+
+  var error = getErrorFromFnCall(this.actual);
+
+  if(isContractErr(error)) {
+    result = true;
+  } else if(error) {
+    this.message = makeMessageFromError(error);
+  }
+
+  return result;
+}
+
+function makeMessageFromError(error, msg) {
+  var prefix = 'Expected Function to throw contract error',
+      additional = '',
+      suffix = 'but it threw ' + error.message;
+
+  if(msg) {
+    additional = 'containing "' + msg + '"';
+  }
+
+  return function() {
+    return prefix + additional + suffix;
   }
 }
 
-function toThrowContractError() {
-  var result = false;
+function getErrorFromFnCall(fn) {
+  var error;
 
-  tryCatch(this.actual, function(err) {
-    if(isContractErr(err)) {
-      result = true;
-    } else {
-      this.message = 'Expected Function to throw contract error but it threw ' + err.message;
-    }
-  }.bind(this));
+  try {
+    fn();
+  } catch(err) {
+    error = err;
+  }
 
-  return result;
+  return error;
+}
+
+function toThrowContractError(msg) {
+  if(msg) {
+    return toThrowContractErrorWithMsg.call(this, msg);
+  } else {
+    return toThrowContractErrorPlain.call(this);
+  }
 }
 
 module.exports = {

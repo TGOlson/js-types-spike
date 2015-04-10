@@ -1,6 +1,7 @@
 /**
  * Using type signature-like syntax over a contract library
  * Working syntax:
+ *    // concat :: String -> String -> String
  *    var concat = f([String, String], String).define(
  *     function(s1, s2) {
  *         return s1 + s2;
@@ -11,6 +12,8 @@
 var c = require('rho-contracts');
 
 var R = require('ramda');
+
+var TypeUtils = require('./typeUtils');
 
 function contract(inputTypes, outputType) {
   return {
@@ -32,21 +35,11 @@ function makeContractObjectFromType(type, i) {
 var typeToContract = R.compose(c.pred, R.is);
 var renameContract =  R.invoker(1, 'rename');
 
-var typeToString = R.cond(
-  [R.eq(String), R.always('String')],
-  [R.eq(Number), R.always('Number')],
-  [R.T,          throwUnkownTypeError]
-);
-
 // Type -> Contract
 var getContractFromType = R.converge(
   renameContract,
-  typeToString,
+  TypeUtils.typeToString,
   typeToContract
 );
-
-function throwUnkownTypeError(type) {
-  throw new Error('Unknown data type ' + type);
-}
 
 module.exports = contract;
